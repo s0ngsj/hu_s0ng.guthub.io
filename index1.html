@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金属改性 CeO₂ 体系 · 催化剂数据库</title>
+    <style>
+        /* 样式代码同之前，此处省略以节省篇幅，请参考之前回答中的完整样式 */
+        /* 但为了完整，此处保留一个精简样式，您也可以直接用之前的样式文件 */
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+        body { background:#f0f4f9; padding:20px; }
+        .app { max-width:1400px; margin:0 auto; }
+        header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+        header h1 { font-size:28px; font-weight:700; background:linear-gradient(135deg,#0b2b4a,#1a4b6d); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+        .stat-card { background:#fff; padding:16px; border-radius:12px; text-align:center; border:1px solid #dce5ef; }
+        .stat-card .number { font-size:28px; font-weight:700; color:#0b2b4a; }
+        .stat-card .label { font-size:14px; color:#5a7a8a; }
+        .main-layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        @media (max-width:900px){ .main-layout{grid-template-columns:1fr;} }
+        .periodic-card, .result-card { background:#fff; border-radius:16px; padding:20px; border:1px solid #dce5ef; }
+        .card-title { font-size:18px; font-weight:600; margin-bottom:16px; }
+        .pt-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:6px; }
+        .pt-cell { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; font-weight:600; background:#f5f8fc; color:#7a8fa6; min-height:52px; border:1px solid transparent; cursor:default; position:relative; }
+        .pt-cell .symbol { font-size:16px; }
+        .pt-cell .number { font-size:9px; opacity:0.6; }
+        .pt-cell.has-data { background:#e3edf7; color:#0b2b4a; border-color:#c6d9eb; cursor:pointer; }
+        .pt-cell.has-data:hover { background:#d0e2f2; transform:scale(1.05); }
+        .pt-cell.selected { background:#1a5a8a !important; color:#fff !important; }
+        .selection-indicator { display:flex; align-items:center; gap:16px; padding:12px 16px; background:#f8fafc; border-radius:12px; margin-top:16px; flex-wrap:wrap; }
+        .btn-clear { margin-left:auto; padding:4px 14px; border:none; background:transparent; color:#7a8fa6; cursor:pointer; }
+        .btn-clear:hover { background:#e8edf4; }
+        .table-wrap { overflow-x:auto; margin-top:8px; }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        th { text-align:left; padding:10px; background:#f5f8fc; border-bottom:2px solid #dce5ef; }
+        td { padding:8px 10px; border-bottom:1px solid #edf2f7; vertical-align:middle; }
+        .group-divider td { background:#f5f8fc; font-weight:600; border-top:2px solid #dce5ef; }
+        .empty { color:#aaa; font-style:italic; }
+        .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#051a2e; color:#fff; padding:12px 28px; border-radius:40px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; }
+        .toast.show { opacity:1; }
+        .loading { display:flex; justify-content:center; padding:30px; gap:12px; color:#3a5a7a; }
+        .spinner { border:3px solid #dce5ef; border-top-color:#0b2b4a; border-radius:50%; width:24px; height:24px; animation:spin 0.7s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .cat-btn { padding:6px 16px; border-radius:30px; border:1px solid #dce5ef; background:transparent; cursor:pointer; font-size:13px; transition:0.2s; }
+        .cat-btn.active { background:#0b2b4a; color:#fff; border-color:#0b2b4a; }
+        .cat-btn:hover { background:#e8edf4; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <header><h1>🔬 金属改性 CeO₂ 体系</h1><span id="dbInfo" style="font-size:14px;color:#5a7a8a;">data.json</span></header>
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="number" id="statCats">—</div><div class="label">催化剂组合</div></div>
+        <div class="stat-card"><div class="number" id="statFeats">—</div><div class="label">特征种类</div></div>
+        <div class="stat-card"><div class="number" id="statPoints">—</div><div class="label">有效数据点</div></div>
+        <div class="stat-card"><div class="number" id="statElems">—</div><div class="label">所含元素</div></div>
+    </div>
+    <div class="main-layout">
+        <div class="periodic-card">
+            <div class="card-title">📋 周期表 <span style="font-size:14px;font-weight:400;color:#5a7a8a;">（点击元素）</span></div>
+            <div id="periodicGrid" class="pt-grid"></div>
+            <div class="selection-indicator">
+                <span>当前筛选：</span>
+                <span id="elDisplay" style="font-weight:600;">—</span>
+                <button class="btn-clear" id="btnClear">✕ 清除</button>
+            </div>
+            <div style="margin-top:12px;font-size:13px;color:#5a7a8a;display:flex;gap:16px;flex-wrap:wrap;">
+                <span>🔵 有数据的元素</span><span>⚪ 无数据</span>
+            </div>
+        </div>
+        <div class="result-card">
+            <div class="card-title">📄 特征值 <span id="resultSub" style="font-size:14px;font-weight:400;color:#5a7a8a;"></span></div>
+            <div id="resultArea"><div class="loading"><div class="spinner"></div><span>加载数据中...</span></div></div>
+        </div>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+    // ========== 全局状态 ==========
+    let data = null;
+    let currentElement = null;
+    let currentCatalyst = null;
+    let catalystFeatures = {};
+
+    const grid = document.getElementById('periodicGrid');
+    const resultArea = document.getElementById('resultArea');
+    const resultSub = document.getElementById('resultSub');
+    const toast = document.getElementById('toast');
+
+    function showToast(msg, dur=3000) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('show'), dur);
+    }
+
+    // ========== 加载 data.json ==========
+    async function loadData() {
+        try {
+            const resp = await fetch('data.json');
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            data = await resp.json();
+            // 按催化剂分组特征
+            data.features.forEach(f => {
+                if (!catalystFeatures[f.catalyst]) catalystFeatures[f.catalyst] = [];
+                catalystFeatures[f.catalyst].push(f);
+            });
+            // 更新统计
+            document.getElementById('statCats').textContent = data.stats.total_catalysts || data.catalysts.length;
+            document.getElementById('statFeats').textContent = data.stats.total_unique_features || 0;
+            document.getElementById('statPoints').textContent = data.stats.total_data_points || 0;
+            document.getElementById('statElems').textContent = data.elements.length;
+            // 渲染周期表
+            renderPeriodicTable(data.elements || []);
+            showToast('✅ 数据加载成功');
+            resultArea.innerHTML = `<div style="padding:20px;text-align:center;color:#7a8fa6;">点击元素查看数据</div>`;
+        } catch (err) {
+            showToast('❌ 加载 data.json 失败: ' + err.message, 5000);
+            resultArea.innerHTML = `<div style="color:red;padding:20px;">加载失败，请确保 data.json 与页面在同一目录。</div>`;
+            console.error(err);
+        }
+    }
+
+    // ========== 渲染周期表 ==========
+    function renderPeriodicTable(elements) {
+        if (!elements || !Array.isArray(elements)) elements = [];
+        const elemInfo = {
+            Zn:{number:30,period:4,group:12}, Cu:{number:29,period:4,group:11}, Ni:{number:28,period:4,group:10},
+            Co:{number:27,period:4,group:9}, Fe:{number:26,period:4,group:8}, Mn:{number:25,period:4,group:7},
+            Cr:{number:24,period:4,group:6}, V:{number:23,period:4,group:5}, Ti:{number:22,period:4,group:4},
+            Sc:{number:21,period:4,group:3}, Cd:{number:48,period:5,group:12}, Pd:{number:46,period:5,group:10},
+            Rh:{number:45,period:5,group:9}, Ru:{number:44,period:5,group:8}, Mo:{number:42,period:5,group:6},
+            Nb:{number:41,period:5,group:5}, Zr:{number:40,period:5,group:4}, Y:{number:39,period:5,group:3},
+            Au:{number:79,period:6,group:11}, Pt:{number:78,period:6,group:10}, Ir:{number:77,period:6,group:9},
+            Os:{number:76,period:6,group:8}, Re:{number:75,period:6,group:7}, W:{number:74,period:6,group:6},
+            Ta:{number:73,period:6,group:5}, Hf:{number:72,period:6,group:4}, Ce:{number:58,period:6,group:3}
+        };
+        const set = new Set(elements);
+        const periods = [4,5,6,7];
+        const groups = [3,4,5,6,7,8,9,10,11,12];
+        const lookup = {};
+        elements.forEach(el => {
+            const info = elemInfo[el];
+            if (info) {
+                lookup[info.period + '-' + info.group] = {symbol: el, number: info.number};
+            } else {
+                lookup['7-3'] = {symbol: el, number: 0};
+            }
+        });
+        let html = '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-bottom:4px;">';
+        groups.forEach(g => html += `<div style="text-align:center;font-size:11px;color:#7a8fa6;">${g}</div>`);
+        html += '</div>';
+        periods.forEach(p => {
+            groups.forEach(g => {
+                const key = p + '-' + g;
+                const item = lookup[key];
+                if (item) {
+                    const sym = item.symbol;
+                    const hasData = set.has(sym);
+                    const sel = (currentElement === sym);
+                    const cls = 'pt-cell' + (hasData ? ' has-data' : '') + (sel ? ' selected' : '');
+                    html += `<div class="${cls}" data-el="${sym}" onclick="selectElement('${sym}')" style="${!hasData ? 'cursor:default;' : ''}">
+                                <span class="number">${item.number}</span>
+                                <span class="symbol">${sym}</span>
+                            </div>`;
+                } else {
+                    html += `<div class="pt-cell" style="background:transparent;border-color:transparent;min-height:52px;"></div>`;
+                }
+            });
+        });
+        grid.innerHTML = html;
+        document.getElementById('elDisplay').textContent = currentElement || '—';
+    }
+
+    // ========== 选择元素 ==========
+    function selectElement(el) {
+        if (currentElement === el) {
+            currentElement = null;
+            currentCatalyst = null;
+            renderPeriodicTable(data.elements || []);
+            resultArea.innerHTML = `<div style="padding:20px;text-align:center;color:#7a8fa6;">请选择元素</div>`;
+            resultSub.textContent = '';
+            return;
+        }
+        currentElement = el;
+        const catList = data.element_map[el] || [];
+        if (catList.length === 0) {
+            resultArea.innerHTML = `<div style="padding:20px;text-align:center;color:#7a8fa6;">该元素无数据</div>`;
+            renderPeriodicTable(data.elements || []);
+            return;
+        }
+        currentCatalyst = catList[0];
+        renderPeriodicTable(data.elements || []);
+        renderCatalystList(el, catList);
+    }
+
+    function renderCatalystList(el, catList) {
+        let html = `<div style="padding:8px 0;font-size:14px;color:#3a5a7a;">包含 <strong>${el}</strong> 的催化剂（${catList.length} 个）：</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">`;
+        catList.forEach(name => {
+            const active = (currentCatalyst === name) ? 'active' : '';
+            html += `<button class="cat-btn ${active}" onclick="selectCatalyst('${name}')">${name}</button>`;
+        });
+        html += `</div>`;
+        if (currentCatalyst && catList.includes(currentCatalyst)) {
+            const features = catalystFeatures[currentCatalyst] || [];
+            html += buildFeatureTable(features);
+            resultSub.textContent = currentCatalyst;
+        } else {
+            if (catList.length > 0) {
+                currentCatalyst = catList[0];
+                renderCatalystList(el, catList);
+                return;
+            }
+            html += `<div style="padding:20px;text-align:center;color:#7a8fa6;">请选择具体催化剂</div>`;
+        }
+        resultArea.innerHTML = html;
+    }
+
+    function selectCatalyst(name) {
+        currentCatalyst = name;
+        const el = currentElement;
+        const catList = data.element_map[el] || [];
+        renderCatalystList(el, catList);
+    }
+
+    function buildFeatureTable(features) {
+        if (!features || features.length === 0) return '<div style="padding:20px;text-align:center;color:#7a8fa6;">该催化剂暂无特征数据</div>';
+        const groups = {};
+        features.forEach(f => {
+            const g = f.group || '其他';
+            if (!groups[g]) groups[g] = [];
+            groups[g].push(f);
+        });
+        let html = `<div class="table-wrap"><table><thead><tr><th>特征名称</th><th>符号</th><th>单位</th><th>数值</th></tr></thead><tbody>`;
+        for (const [g, items] of Object.entries(groups)) {
+            html += `<tr class="group-divider"><td colspan="4">${g}</td></tr>`;
+            items.forEach(f => {
+                const val = (f.value !== null && f.value !== undefined) ? f.value : (f.raw || '—');
+                const cls = (f.value === null && f.raw === '') ? 'empty' : '';
+                const display = typeof val === 'number' ? (Number.isInteger(val) ? val : val.toFixed(4).replace(/\.?0+$/,'')) : val;
+                html += `<tr><td>${f.feature_name}</td><td>${f.symbol||''}</td><td>${f.unit||''}</td><td class="${cls}">${display}</td></tr>`;
+            });
+        }
+        html += `</tbody></table></div>`;
+        return html;
+    }
+
+    document.getElementById('btnClear').addEventListener('click', function() {
+        currentElement = null;
+        currentCatalyst = null;
+        renderPeriodicTable(data.elements || []);
+        resultArea.innerHTML = `<div style="padding:20px;text-align:center;color:#7a8fa6;">请选择元素</div>`;
+        resultSub.textContent = '';
+    });
+
+    window.selectElement = selectElement;
+    window.selectCatalyst = selectCatalyst;
+
+    loadData();
+</script>
+</body>
+</html>
